@@ -120,7 +120,7 @@ pub mod screen {
             .into()
     });
 
-    pub async fn set_top(msg: &[String]) -> Vec<String> {
+    pub async fn set_top(msg: &[String]) {
         let chunks = LAYOUT.read().await;
 
         TERMINAL
@@ -140,7 +140,7 @@ pub mod screen {
                 f.render_widget(top_messages, chunk);
             })
             .expect("Failed to draw top messages");
-        msg.to_vec()
+        
     }
     
 
@@ -150,7 +150,7 @@ pub mod screen {
         let chunks = LAYOUT.read().await;
         let top_msg = TOP_MSG.read().await;
         let input_widget = list(once(""), "Enter text");
-        let top_widg = list(top_msg.iter().map(String::as_str), "Top Messy");
+        let top_widg = list(top_msg.iter().map(String::as_str), "Top Mess");
         TERMINAL
             .write()
             .await
@@ -171,13 +171,13 @@ pub mod screen {
             .expect("Failed to draw info messages");
     }
 
-    pub async fn set_input(msg_to_send: &str) {
+    pub async fn set_input(msg_to_send: &str, title: &str) {
         let foovar = LAST_MESSAGE_INFO.try_lock().unwrap();
         let stat_messages_wid = list(once(&**foovar), "Information");
         let chunks = LAYOUT.read().await;
         let top_msg = TOP_MSG.read().await;
-        let input_widget = list(once(msg_to_send), "Enter text");
-        let top_widg = list(top_msg.iter().map(String::as_str), "Top Messx");
+        let input_widget = list(once(msg_to_send), title);
+        let top_widg = list(top_msg.iter().map(String::as_str), "Top Mess");
         TERMINAL
             .write()
             .await
@@ -203,7 +203,7 @@ static TOP_MSG: Lazy<RwLock<Vec<String>>> = Lazy::new(|| RwLock::new(Vec::new())
 pub async fn push_top(msg: String) {
     let mut all = TOP_MSG.write().await;
     all.push(msg);
-    *all = screen::set_top(&all).await;
+    screen::set_top(&all).await;
 }
 
 #[macro_export]
@@ -231,11 +231,11 @@ fn list<'a, L: IntoIterator<Item = impl Into<ListItem<'a>>>, T: Into<Title<'a>>>
         .style(Style::new().white().on_black())
 }
 
-pub async fn get_input() -> String {
+pub async fn get_input(title: &str) -> String {
     let mut input = String::new();
     loop {
         input.push('█');
-        screen::set_input(&input).await;
+        screen::set_input(&input, title).await;
         input.pop();
 
         if let Event::Key(key) = stdin::read().await {
@@ -253,8 +253,7 @@ pub async fn get_input() -> String {
     {
         let mut all = TOP_MSG.write().await;
         let msg = all.pop();
-        let var = screen::set_top(&all).await;
-        *all = var;
+        screen::set_top(&all).await;
         msg
     };
     push_top(format!("{input}\n")).await;

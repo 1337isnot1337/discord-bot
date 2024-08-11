@@ -1,5 +1,5 @@
 [package]
-name = "discord-api"
+name = "discord-bot"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,6 +8,7 @@ clearscreen = "3.0.0"
 crossterm = "0.28.1"
 once_cell = "1.19.0"
 ratatui = "0.27.0"
+regex = "1.10.6"
 serenity = "0.12"
 tokio = { version = "1.21.2", features = ["full"] }
 
