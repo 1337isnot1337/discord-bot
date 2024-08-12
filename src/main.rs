@@ -120,7 +120,11 @@ impl EventHandler for Handler {
                     message_top!("Error sending message: {why:?}");
                 }
             }
-            if msg.content.contains("sigma") {
+
+            if msg.content.contains("sigma")
+                && (msg.author.id != 1_271_514_040_786_747_495)
+                && (msg.author.id != 1_271_653_492_049_576_026)
+            {
                 if let Err(why) = msg
                     .channel_id
                     .say(&ctx.http, "https://tenor.com/nmfj36p1Tdl.gif")
@@ -374,6 +378,9 @@ async fn message_func() {
             if my_message.contains('#') {
                 my_message = resolve_channels(guild_id, &my_message).await;
             }
+            if my_message == "!yap" {
+                my_message = yapping();
+            }
 
             if let Err(why) = parsed.say(&cur_context.http.clone(), my_message).await {
                 message_top!("Error sending message: {why:?}");
@@ -456,6 +463,20 @@ fn store(msg: &Message) {
         .append(true)
         .open("txt_files/input.txt")
         .unwrap();
-    file.write_all((format!("{} ", msg.content)).as_bytes())
-        .unwrap();
+    let bad_words = [
+        "fag",
+        "nig",
+        "nate higgers",
+        "f@g",
+        "!yap",
+        "!work",
+        "!slut",
+        "!roulette",
+        "!blackjack",
+    ]; //add more bad words here if needed
+
+    if !bad_words.iter().any(|&x| msg.content.contains(x)) {
+        file.write_all((format!("{} ", msg.content)).as_bytes())
+            .unwrap();
+    }
 }
