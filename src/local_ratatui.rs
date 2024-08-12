@@ -169,7 +169,7 @@ pub mod screen {
     }
 
     pub async fn set_input(msg_to_send: &str, title: &str) {
-        let foovar = LAST_MESSAGE_INFO.try_lock().unwrap();
+        let foovar = LAST_MESSAGE_INFO.lock().await;
         let stat_messages_wid = list(once(&**foovar), "Information");
         let chunks = LAYOUT.read().await;
         let top_msg = TOP_MSG.read().await;

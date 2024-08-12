@@ -1,7 +1,7 @@
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use once_cell::sync::Lazy;
 use serenity::{
-    all::{ChannelId, GuildId},
+    all::{ChannelId, GuildId, ReactionType},
     async_trait,
     model::channel::Message,
     prelude::*,
@@ -73,6 +73,7 @@ impl EventHandler for Handler {
         *THE_LAST_MESSAGE.write().await = Some(msg.channel_id);
         if (msg.author.id != 1_271_514_040_786_747_495)
             && (msg.author.id != 1_271_653_492_049_576_026)
+            && (msg.author.id != 810_609_798_268_715_029)
         {
             store(&msg);
         };
@@ -200,6 +201,10 @@ impl EventHandler for Handler {
                     message_top!("Error sending message: {why:?}");
                 }
             }
+        }
+        if msg.author.id == 1_252_795_706_188_496_906 {
+            let emoji = ReactionType::Unicode("🤓".to_string());
+            msg.react(ctx.http, emoji).await.unwrap();
         }
     }
 }
@@ -466,7 +471,7 @@ fn store(msg: &Message) {
     let bad_words = [
         "fag",
         "nig",
-        "nate higgers",
+        "higgers",
         "f@g",
         "!yap",
         "!work",
