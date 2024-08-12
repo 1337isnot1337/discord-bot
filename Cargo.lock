@@ -438,6 +438,7 @@ dependencies = [
  "clearscreen",
  "crossterm 0.28.1",
  "once_cell",
+ "rand",
  "ratatui",
  "regex",
  "serenity",

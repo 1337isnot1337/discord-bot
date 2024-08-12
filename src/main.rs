@@ -1,22 +1,16 @@
-use crate::local_ratatui::get_input;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
-use local_ratatui::{
-    screen::{self, cleanup_term},
-    stdin, yap_about_user,
-};
 use once_cell::sync::Lazy;
-use patterns::{resolve_channels, resolve_emojis, resolve_mentions};
 use serenity::{
     all::{ChannelId, GuildId},
     async_trait,
     model::channel::Message,
     prelude::*,
 };
-mod patterns;
 use std::{
     env,
     fs::{File, OpenOptions},
     io::{self, Write},
+    panic,
     path::Path,
     process,
     sync::{
@@ -27,7 +21,18 @@ use std::{
 };
 use tokio::{spawn, time::sleep};
 
+use local_ratatui::{
+    get_input,
+    screen::{self, cleanup_term},
+    stdin, yap_about_user,
+};
+use patterns::{resolve_channels, resolve_emojis, resolve_mentions};
+use yapping::yapping;
+
 mod local_ratatui;
+mod patterns;
+mod yapping;
+
 static SENT_CHANNELS: Lazy<tokio::sync::RwLock<bool>> =
     Lazy::new(|| tokio::sync::RwLock::new(false));
 static RESPOND_BACK: Lazy<tokio::sync::RwLock<bool>> =
@@ -66,6 +71,12 @@ impl EventHandler for Handler {
             *CONTEXT.write().await = Some(ctx.clone());
         }
         *THE_LAST_MESSAGE.write().await = Some(msg.channel_id);
+        if (msg.author.id != 1_271_514_040_786_747_495)
+            && (msg.author.id != 1_271_653_492_049_576_026)
+        {
+            store(&msg);
+        };
+
         if msg.author.id == 1_102_939_243_954_847_745 || *ALL_INTERACT.read().await {
             screen::set_stat_info(yap_about_user(&msg)).await;
 
@@ -118,6 +129,7 @@ impl EventHandler for Handler {
                     message_top!("Error sending message: {why:?}");
                 }
             }
+
             if msg.content.contains("/confess") {
                 let revealed = format!("User {} tried to confess {}", msg.author.name, msg.content);
                 let path = "txt_files/confess.txt";
@@ -155,6 +167,7 @@ impl EventHandler for Handler {
                 \"--help\" -- displays this message
                 \"sigma\" -- displays what the sigma gif
                 \"/confess\" -- confess your sins!
+                \"!yap\" -- the bot will yap
 
                 contact @t3rabit3 for more info
 
@@ -175,6 +188,14 @@ impl EventHandler for Handler {
                     message_top!("Error sending message: {why:?}");
                 }
             }
+            if msg.content == "!yap"
+                && (msg.author.id != 1_271_514_040_786_747_495
+                    && msg.author.id != 1_271_653_492_049_576_026)
+            {
+                if let Err(why) = msg.channel_id.say(&ctx.http, yapping()).await {
+                    message_top!("Error sending message: {why:?}");
+                }
+            }
         }
     }
 }
@@ -183,6 +204,38 @@ static SECTION: Lazy<Mutex<()>> = Lazy::new(|| tokio::sync::Mutex::new(()));
 
 #[tokio::main]
 async fn main() {
+    let default_hook = panic::take_hook();
+
+    // Set the custom panic hook
+    panic::set_hook(Box::new(move |info| {
+        disable_raw_mode().unwrap();
+        cleanup_term();
+        print!("\x1B[?25h");
+        io::stdout().flush().unwrap();
+        clearscreen::clear().expect("Failed to clear screen");
+
+        // Get panic location (file and line number)
+        let location = info.location().map_or_else(
+            || "unknown location".to_string(),
+            |loc| format!("{}:{}", loc.file(), loc.line()),
+        );
+
+        // Get panic message
+        let message = info.payload().downcast_ref::<&str>().unwrap_or(&"Box<Any>");
+
+        // Log the panic details
+        let _ = writeln!(
+            io::stderr(),
+            "Custom panic handler: Panic occurred at {location}: {message}"
+        );
+
+        // Call the default panic hook
+        default_hook(info);
+
+        // Exit the program with a non-zero code
+        process::exit(1);
+    }));
+
     enable_raw_mode().unwrap();
 
     stdin::init();
@@ -263,16 +316,11 @@ async fn message_func() {
                 let init_var = get_input("Enter channel ID or Name").await;
                 if let Ok(id) = init_var.parse() {
                     parsed = id;
-                    *YOUR_LAST_MESSAGE.write().await = Some(id);
-                    *THE_LAST_MESSAGE.write().await = Some(id);
                 } else {
                     parsed = if let Some(id) =
                         find_channel_by_name_in_all_guilds(cur_context, &init_var).await
                     {
-                        *YOUR_LAST_MESSAGE.write().await = Some(id);
-                        *THE_LAST_MESSAGE.write().await = Some(id);
                         id
-
                     } else if init_var.contains('!') {
                         match init_var.as_str() {
                             "!mylast" => {
@@ -306,6 +354,8 @@ async fn message_func() {
 
                 break;
             }
+            *YOUR_LAST_MESSAGE.write().await = Some(parsed);
+            *THE_LAST_MESSAGE.write().await = Some(parsed);
             let guild_id: GuildId =
                 if let Some(var) = find_guild_id_by_channel_id(cur_context, parsed).await {
                     var
@@ -329,7 +379,6 @@ async fn message_func() {
                 message_top!("Error sending message: {why:?}");
             }
             message_top!("Message sent.");
-            
         }
     }
 }
@@ -398,4 +447,15 @@ async fn find_guild_id_by_channel_id(ctx: &Context, channel_id: ChannelId) -> Op
     }
 
     None
+}
+
+fn store(msg: &Message) {
+    let mut file = OpenOptions::new()
+        .create(false)
+        .truncate(false)
+        .append(true)
+        .open("txt_files/input.txt")
+        .unwrap();
+    file.write_all((format!("{} ", msg.content)).as_bytes())
+        .unwrap();
 }

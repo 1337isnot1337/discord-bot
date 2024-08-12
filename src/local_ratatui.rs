@@ -132,20 +132,17 @@ pub mod screen {
                 // Limit the number of lines displayed based on terminal height
                 let height = chunk.height as usize - 1;
                 let msg = &msg[msg.len().saturating_sub(height)..msg.len()];
-                
-                
+
                 let top_messages = List::new(msg.iter().map(String::as_str))
                     .block(Block::bordered())
                     .style(Style::new().white().on_black());
                 f.render_widget(top_messages, chunk);
             })
             .expect("Failed to draw top messages");
-        
     }
-    
 
     pub async fn set_stat_info(msg: String) {
-        LAST_MESSAGE_INFO.try_lock().unwrap().clone_from(&msg);
+        LAST_MESSAGE_INFO.lock().await.clone_from(&msg);
         let stat_messages_wid = list(once(msg), "Information".to_owned());
         let chunks = LAYOUT.read().await;
         let top_msg = TOP_MSG.read().await;
@@ -268,12 +265,12 @@ pub fn yap_about_user(discord_info: &Message) -> String {
 
     format!(
         "Author: {}, Message ID: {}, 
-        Channel ID: {}, Timestamp: {}.\nContent: `{}`\n\
-        Edited Timestamp: {}, TTS: {}, Mentions Everyone: {}, Mentions: {:?}, \
-        Mentioned Roles: {:?}, Mentioned Channels: {:?}, Attachments: {:?}, \
-        Embeds: {:?}, Reactions: {:?}, Pinned: {}, Webhook: {:?}, Message Kind: {:?}, \
-        Activity: {:?}, Application: {:?}, Application ID: {:?}, \
-        Referenced Message: {:?}, Interaction: {:?}, Thread: {:?}, Components: {:?}, \
+        Channel ID: {} \n, Timestamp: {}.\nContent: `{}`\n\
+        Edited Timestamp: {}, TTS: {}, Mentions Everyone: {}\n, Mentions: {:?}, \
+        Mentioned Roles: {:?}, Mentioned Channels: {:?}, Attachments: {:?}\n, \
+        Embeds: {:?}, Reactions: {:?}\n, Pinned: {}, Webhook: {:?}, Message Kind: {:?}, \
+        Activity: {:?}\n, Application: {:?}, Application ID: {:?}, \
+        Referenced Message: {:?}, Interaction\n: {:?}, Thread: {:?}, Components: {:?}, \
         Member Info: {:?}",
         discord_info.author.name,
         discord_info.id,
